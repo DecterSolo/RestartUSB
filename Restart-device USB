@@ -5,7 +5,7 @@ while ($continue) {
         pnputil /enum-devices /connected /class USB | Sort-Object -Descending | Select-Object -Last 30 | Select-String -Pattern "USB" | Select-String -Pattern "ИД экземпляра" >> D:\Tdead.txt
         (Get-Content -Path D:\Tdead.txt) | ForEach-Object { $_ -Replace 'ИД экземпляра:                ', '' } | Set-Content -Path D:\Tdead.txt
 
-        foreach ($line in Get-Content D:\Tdead.txt ) { // Будет создавать файл с откуда будет брать данные для сброса 
+        foreach ($line in Get-Content D:\Tdead.txt ) { # Create file to take data for find USB data
             if ($line -match ".+") {  # Improved regex to match any non-empty line
                 try {
                     pnputil /restart-device "$line"
@@ -20,7 +20,7 @@ while ($continue) {
 
         Write-Host "Нажмите 'F2' для завершения или любую другую клавишу для продолжения..."
         $key = Read-Host
-        if ($key -eq "F2") { // Кнопка выключение перезапуска USB
+        if ($key -eq "F2") { # Button in keyboard 
             $continue = $false
         }
 
