@@ -1,0 +1,82 @@
+Set-ExecutionPolicy RemoteSigned
+
+Add-Type -AssemblyName System.Windows.Forms
+
+$form = New-Object 'System.Windows.Forms.Form'
+$form.AutoScaleDimensions = '8, 17'
+$form.AutoScaleMode = 'Font'
+$form.ClientSize = '416, 262'
+$form.FormBorderStyle = 'FixedDialog'
+$form.Margin = '5, 5, 5, 5'
+$form.MaximizeBox = $False
+$form.MinimizeBox = $False
+$form.ControlBox = $False
+$form.Name = 'Button USB'
+$form.StartPosition = 'CenterScreen'
+$form.Text = 'Test Button USB Restart'
+$form.TopMost = $True  # force window to stay on top
+$form.add_Load($form_Load)
+
+$button = New-Object 'System.Windows.Forms.Button'
+$button.Font = 'Calibri, 12.25pt'
+$button.DialogResult = 'OK'
+$button.Location = '110, 165'
+$button.Margin = '5, 5, 5, 5'
+$button.Name = 'buttonOK'
+$button.Size = '200, 50'
+$button.BackColor = "LightGray"
+$button.ForeColor = "black"
+$button.Text = '&RESTART USB'  # Changed text for clarity
+$button.UseCompatibleTextRendering = $True
+$button.UseVisualStyleBackColor = $False
+$button.Add_Click({
+    # The USB restart logic is now inside this block
+
+    # Clean up the file if it exists before starting.  Useful if script was interrupted previously.
+    if (Test-Path -Path D:\Tdead.txt) {
+      Remove-Item D:\Tdead.txt
+    }
+
+    try {
+        $usbDevices = pnputil /enum-devices /connected /class USB | Sort-Object -Descending | Select-Object -Last 100 | Select-String -Pattern "USB" | Select-String -Pattern "ИД экземпляра"
+        $usbDevices | ForEach-Object {
+            $deviceId = $_ -Replace 'ИД экземпляра:                ', ''
+            if ($deviceId -match ".+") {  # More robust regex
+
+                try {
+                    pnputil /restart-device "$deviceId"
+                    Write-Host "Перезагружено устройство: $deviceId"
+                } catch {
+                    Write-Host "Ошибка при перезагрузке устройства $deviceId : $($_.Exception.Message)"
+                }
+            }
+        }
+
+         if (Test-Path -Path D:\Tdead.txt) { # Check if file still exists
+             Remove-Item D:\Tdead.txt  # Clean up the file after processing if it exists
+         }
+
+
+    } catch {
+        Write-Host "Произошла общая ошибка: $($_.Exception.Message)"
+    }
+})
+$button.Show()  # $button.Hide()
+$form.Controls.Add($button)
+
+# Disable other types of close/exit
+$form.add_FormClosing({ $_.Cancel = $true })
+
+# Create a separate close button
+$closeButton = New-Object System.Windows.Forms.Button
+$closeButton.Location = '110, 220'  # Below the Restart button
+$closeButton.Size = '200, 30'
+$closeButton.Text = '&CLOSE'
+$closeButton.Add_Click({
+    $form.Add_FormClosing({ $_.Cancel = $false })
+    $form.Close()
+})
+$form.Controls.Add($closeButton)
+
+
+[void]$form.ShowDialog()
