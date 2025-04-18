@@ -1,0 +1,35 @@
+$continue = $true
+while ($continue) {
+    try {
+        # Перечисление и перезагрузка USB устройств
+        pnputil /enum-devices /connected /class USB | Sort-Object -Descending | Select-Object -Last 30 | Select-String -Pattern "USB" | Select-String -Pattern "ИД экземпляра" >> D:\Tdead.txt
+        (Get-Content -Path D:\Tdead.txt) | ForEach-Object { $_ -Replace 'ИД экземпляра:                ', '' } | Set-Content -Path D:\Tdead.txt
+
+        foreach ($line in Get-Content D:\Tdead.txt ) { // Будет создавать файл с откуда будет брать данные для сброса 
+            if ($line -match ".+") {  # Improved regex to match any non-empty line
+                try {
+                    pnputil /restart-device "$line"
+                    Write-Host "Перезагружено устройство: $line"
+                } catch {
+                    Write-Host "Ошибка при перезагрузке устройства $line{: $($_.Exception.Message)}"
+                }
+            }
+        }
+
+        Remove-Item D:\Tdead.txt # Clean up the file
+
+        Write-Host "Нажмите 'F2' для завершения или любую другую клавишу для продолжения..."
+        $key = Read-Host
+        if ($key -eq "F2") { // Кнопка выключение перезапуска USB
+            $continue = $false
+        }
+
+        Start-Sleep -Seconds 5
+
+    } catch {
+        Write-Host "Произошла общая ошибка: $($_.Exception.Message)"
+        $continue = $false # Stop the loop if a critical error occurs
+    }
+}
+
+Write-Host "Скрипт завершен."
